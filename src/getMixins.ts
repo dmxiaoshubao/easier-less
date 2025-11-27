@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 // import path, { resolve } from 'path';
 // import { rejects } from 'assert';
 
@@ -45,5 +46,29 @@ export function getMixinsPaths() {
   const files =
     vscode.workspace.getConfiguration().get<Array<string>>('less.files') || [];
   console.log(files);
+
+  // 解析 @ 符号路径别名和相对路径
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders.length > 0) {
+    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+    const resolvedFiles = files.map((file) => {
+      if (typeof file === 'string') {
+        // 处理 @/ 开头的路径
+        if (file.startsWith('@/')) {
+          return path.join(workspaceRoot, file.substring(2));
+        }
+        // 处理相对路径（不是绝对路径的情况）
+        // 判断是否为绝对路径：Windows 下以盘符开头，Unix 下以 / 开头
+        const isAbsolute = path.isAbsolute(file);
+        if (!isAbsolute) {
+          return path.join(workspaceRoot, file);
+        }
+      }
+      return file;
+    });
+    console.log('Resolved files:', resolvedFiles);
+    return resolvedFiles;
+  }
+
   return files;
 }
