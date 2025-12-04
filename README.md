@@ -43,6 +43,18 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 - ✅ 支持 Mixin 方法（如 `.button(@color)`）
 - ✅ 自动去重，避免补全时出现双点号
 
+
+## 🎬 功能演示
+
+### 变量自动补全
+![](images/variable-auto-completion.gif)
+### 方法自动补全
+![](images/method-auto-completion.gif)
+### 悬浮提示
+![](images/floating-tip.gif)
+### 跳转定义
+![](images/jump-definition.gif)
+
 ## 🚀 使用
 
 ### 初次使用
@@ -177,16 +189,6 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 }
 </style>
 ```
-
-## 🎬 功能演示
-
-### 变量自动补全
-
-### 方法自动补全
-
-### 悬浮提示
-
-### 跳转定义
 
 ## 🆚 与原版对比
 
