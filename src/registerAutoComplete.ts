@@ -113,6 +113,58 @@ export default function (
   }
 
   /**
+   * 属性值位置的 @ 变量补全（支持 color: @ 和 color:@ 场景）
+   * 这个提供器在手动触发补全或输入冒号后触发
+   */
+  function provideCompletionItems3(
+    document: vscode.TextDocument,
+    position: vscode.Position,
+    token: vscode.CancellationToken,
+    context: vscode.CompletionContext
+  ) {
+    const line = document.lineAt(position);
+    const lineText = line.text.substring(0, position.character);
+
+    // 检查是否在 Vue 文件的 style 标签内，且不在括号内
+    if (document.languageId === 'vue') {
+      if (!isInStyleTag(document, position) || isInParentheses(lineText)) {
+        return;
+      }
+    }
+
+    // 检查是否在属性值位置：匹配 : 后面可能有空格，然后光标位置
+    // 支持 color: | 和 color:| 两种场景（|表示光标位置）
+    const propertyValueMatch = lineText.match(/:\s*$/);
+
+    if (propertyValueMatch) {
+      // 在属性值位置，显示所有变量补全
+      return Object.entries(variableStore).map(([key, val]) => {
+        const label = key.startsWith('@') ? key.substring(1) : key;
+        const completionItem = new vscode.CompletionItem(
+          '@' + label,
+          vscode.CompletionItemKind.Variable
+        );
+
+        completionItem.detail = val;
+        // 插入完整的变量名（包括 @）
+        completionItem.insertText = '@' + label;
+        completionItem.filterText = '@' + label;
+        completionItem.sortText = '0' + label; // 确保变量排在前面
+
+        if (
+          /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(val) ||
+          key.indexOf("Color") !== -1 ||
+          key.indexOf("color") !== -1
+        ) {
+          completionItem.kind = vscode.CompletionItemKind.Color;
+        }
+
+        return completionItem;
+      });
+    }
+  }
+
+  /**
    * . 自动补全
    * @param document
    * @param position
@@ -156,6 +208,7 @@ export default function (
     return null;
   }
 
+  // 注册 @ 符号触发的补全（用于 @var 这样的场景）
   const unRegister1 = vscode.languages.registerCompletionItemProvider(
     "less",
     {
@@ -164,6 +217,8 @@ export default function (
     },
     "@"
   );
+
+  // 注册 . 符号触发的补全
   const unRegister2 = vscode.languages.registerCompletionItemProvider(
     "less",
     {
@@ -172,6 +227,8 @@ export default function (
     },
     "."
   );
+
+  // 注册 Vue 文件的 @ 补全
   const unRegister3 = vscode.languages.registerCompletionItemProvider(
     "vue",
     {
@@ -180,6 +237,8 @@ export default function (
     },
     "@"
   );
+
+  // 注册 Vue 文件的 . 补全
   const unRegister4 = vscode.languages.registerCompletionItemProvider(
     "vue",
     {
@@ -188,12 +247,27 @@ export default function (
     },
     "."
   );
-  unRegisters.push(unRegister1);
-  unRegisters.push(unRegister2);
-  unRegisters.push(unRegister3);
-  unRegisters.push(unRegister4);
-  context.subscriptions.push(unRegister1);
-  context.subscriptions.push(unRegister2);
-  context.subscriptions.push(unRegister3);
-  context.subscriptions.push(unRegister4);
+
+  // 注册冒号和空格触发的补全（用于 color: @ 和 color:@ 场景）
+  const unRegister5 = vscode.languages.registerCompletionItemProvider(
+    "less",
+    {
+      provideCompletionItems: provideCompletionItems3,
+      resolveCompletionItem,
+    },
+    ":", " "  // 冒号和空格都可以触发
+  );
+
+  // 注册 Vue 文件的冒号和空格补全
+  const unRegister6 = vscode.languages.registerCompletionItemProvider(
+    "vue",
+    {
+      provideCompletionItems: provideCompletionItems3,
+      resolveCompletionItem,
+    },
+    ":", " "
+  );
+
+  unRegisters.push(unRegister1, unRegister2, unRegister3, unRegister4, unRegister5, unRegister6);
+  context.subscriptions.push(unRegister1, unRegister2, unRegister3, unRegister4, unRegister5, unRegister6);
 }
