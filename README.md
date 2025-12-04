@@ -61,7 +61,8 @@ fork 自 https://github.com/ADKcodeXD/easier-less
     "@/src/styles/mixins.less",
     "src/styles/theme.less"
   ],
-  "less.notice": true
+  "less.notice": true,
+  "less.suppressNotice": false
 }
 ```
 
@@ -73,6 +74,12 @@ fork 自 https://github.com/ADKcodeXD/easier-less
   - 支持绝对路径
 
 - **`less.notice`**: 是否显示初次使用提示（默认 `true`）
+  - 全局配置，影响所有项目
+
+- **`less.suppressNotice`**: 不再提示选择 Mixin 文件（默认 `false`）
+  - 项目级别配置，仅对当前项目生效
+  - 点击弹窗中的"不再提示"按钮后自动设置为 `true`
+  - 删除或改为 `false` 可重新启用提示
 
 ### 路径格式示例
 
@@ -200,7 +207,8 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 - ✨ 新增实时文件监听，修改后自动重新加载
 - ✨ 监听所有递归导入的 Less 文件
 - ✨ 添加状态栏加载提示
-- ✨ 文件删除时显示警告
+- ✨ 初次使用提示增加"不再提示"选项
+- ✨ 支持项目级别的提示控制，不影响其他项目
 
 ### v0.0.1
 - ✨ 添加路径别名 `@/` 支持

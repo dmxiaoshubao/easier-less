@@ -9,6 +9,12 @@ export function welcome() {
     return;
   }
 
+  // 检查是否已设置不再提示
+  const suppressNotice = vscode.workspace.getConfiguration().get('less.suppressNotice');
+  if (suppressNotice) {
+    return;
+  }
+
   let mixinsPaths: string[] = [];
 
   const files =
@@ -19,7 +25,7 @@ export function welcome() {
     return;
   } else {
     vscode.window
-      .showInformationMessage('初次使用，请选择mixin文件', '选择')
+      .showInformationMessage('初次使用，请选择mixin文件', '选择', '不再提示')
       .then(
         (item) => {
           if (item === '选择') {
@@ -56,6 +62,34 @@ export function welcome() {
                   vscode.window.showInformationMessage('设置成功! 已保存到项目 .vscode/settings.json');
                 }
               });
+          } else if (item === '不再提示') {
+            // 用户选择不再提示，保存到项目配置中
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+              // 确保 .vscode 目录存在
+              const workspaceRoot = workspaceFolders[0].uri.fsPath;
+              const vscodeDir = path.join(workspaceRoot, '.vscode');
+              if (!fs.existsSync(vscodeDir)) {
+                fs.mkdirSync(vscodeDir, { recursive: true });
+              }
+
+              // 使用 VSCode API 更新配置，它会自动处理 JSONC 格式和现有配置
+              vscode.workspace
+                .getConfiguration()
+                .update('less.suppressNotice', true, vscode.ConfigurationTarget.Workspace)
+                .then(
+                  () => {
+                    vscode.window.showInformationMessage(
+                      '已设置不再提示。如需重新提示，请在 .vscode/settings.json 中删除或修改 less.suppressNotice 配置'
+                    );
+                  },
+                  (error) => {
+                    vscode.window.showErrorMessage('保存配置失败: ' + error.message);
+                  }
+                );
+            } else {
+              vscode.window.showWarningMessage('未找到工作区，无法保存配置');
+            }
           }
         },
         (_e) => {

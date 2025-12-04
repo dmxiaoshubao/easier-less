@@ -33,6 +33,12 @@
           "scope": "window",
           "default": true,
           "description": "是否开启通知"
+        },
+        "less.suppressNotice": {
+          "type": "boolean",
+          "scope": "resource",
+          "default": false,
+          "description": "不再提示选择mixin文件（项目级别）"
         }
       }
     }
