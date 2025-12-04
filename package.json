@@ -2,10 +2,11 @@
   "name": "less-vue-sfc",
   "displayName": "easier-less-vue",
   "description": "一个简单方便使用less的vscode插件(支持在vue sfc中运行)",
-  "version": "0.0.9",
-  "publisher": "ADKcodeXD",
+  "version": "0.0.2",
+  "publisher": "dmxiaoshubao",
   "repository": "https://github.com/ADKcodeXD/easier-less",
-  "icon": "images/less-vue.png",
+  "license": "MIT",
+  "icon": "images/less-for-vue.png",
   "engines": {
     "vscode": "^1.46.0"
   },

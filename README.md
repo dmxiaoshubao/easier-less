@@ -1,40 +1,228 @@
-# easier-less-forvue ![](https://img.shields.io/badge/vscode%20plugin-0.0.8-brightgreen)
+# easier-less-vue ![](https://img.shields.io/badge/vscode%20plugin-0.0.2-brightgreen)
 
-🖖 一个方便使用 less 的 vscode 插件
-fork 自 https://github.com/ohguaiguai/easier-less
-对原插件做了vue的支持
+🖖 一个方便使用 less 的 vscode 插件，专为 Vue 和 Less 开发优化
 
-## 使用
+fork 自 https://github.com/ADKcodeXD/easier-less
+在原插件基础上增强了 Vue SFC 支持和诸多实用功能
 
-1. 打开项目, 然后打开某个 less 文件会提示选择 mixins 文件(这个文件存放我们自定义的变量、方法)，支持多选； 下一次相同的操作会提示是否更新之前的选择。
-2. 支持在用户配置文件 `setting.json` 中手动修改配置项: `less.files` `less.notice`。
+## ✨ 核心功能
 
-## 为什么要做这个插件？
+### 1. 智能自动补全
+- 📝 **变量补全**：输入 `@` 自动提示所有 Less 变量，色值变量会显示颜色
+- 🎯 **类名/Mixin 补全**：输入 `.` 自动提示所有类名和 Mixin 方法
+- 🎨 **Vue SFC 支持**：在 `.vue` 文件的 `<style lang="less">` 标签内智能触发
+- 🚫 **智能过滤**：自动排除括号内的补全（避免在函数参数中误触发）
 
-有三个痛点 😖
+### 2. 悬浮提示
+- 🔍 鼠标悬停在变量或方法上，即时显示其定义内容
+- 💡 快速查看变量值，无需跳转文件
 
-1. less 文件中码入某个色值变量时常常因为**记不住变量名称、变量对应的色值**而不得不打开 mixins.less，然后先找到想要的色值，再找到目标变量，最后切换回之前的 less 文件拷贝粘贴，一波几折，很是麻烦；想使用自定义的方法也有类似的问题。
-2. less 文件中无法方便获悉变量或方法对应的值，需要到 mixins.less 文件中去找。
-3. 在当前 less 文件中无法直接打开 mixins.less 文件，需要在目录中查找或者全局搜。
+### 3. 跳转定义
+- ⚡ 按住 `Cmd/Ctrl` 点击变量或类名，直接跳转到定义位置
+- 📍 支持 Less 文件和 Vue SFC 中的跳转
+- 🎯 支持普通 CSS 类名和 Mixin 方法的跳转
 
-## 当前版本提供的功能
+### 4. 🔥 路径别名支持
+- 📂 支持 `@/` 路径别名（指向项目根目录）
+- 🔗 自动解析相对路径和绝对路径
+- 🎯 配置文件时自动转换为 `@/` 格式，便于项目迁移
 
-1.在 less 文件中键入 `@` 自动补全变量名，如果是色值变量也会显示色值；输入 `.` 自动补全方法名。
+### 5. 🔄 递归导入加载
+- 📦 自动递归加载 `@import` 导入的所有文件
+- 🛡️ 智能循环引用保护
+- 🌳 支持多层嵌套导入
 
-![](https://assets.onlyadaydreamer.top/autocompletefor%40.gif)
+### 6. ⚡ 实时文件监听
+- 👀 监听所有 Less 文件（包括递归导入的文件）
+- 🔄 文件修改后自动重新加载，无需重启 VS Code
+- 📢 状态栏实时显示加载状态
+- ⚠️ 文件删除时显示警告提示
 
-![](https://assets.onlyadaydreamer.top/autocompletefordot.gif)
+### 7. 🎨 增强的 CSS 类支持
+- ✅ 支持普通 CSS 类（如 `.button`）
+- ✅ 支持 Mixin 方法（如 `.button(@color)`）
+- ✅ 自动去重，避免补全时出现双点号
 
-2.鼠标悬浮在变量或方法上显示其值。
+## 🚀 使用
 
-![](https://assets.onlyadaydreamer.top/hover.gif)
+### 初次使用
+1. 打开项目，打开任意 Less 或 Vue 文件
+2. 插件会提示选择 Mixin 文件（存放变量、方法的文件）
+3. 支持多选文件，选择后自动保存到项目配置
 
-3.对于 less 变量或方法，`cmd` 或 `ctrl` 显示下划线点击可以直接跳转到其定义位置。
+### 手动配置
 
-![](https://assets.onlyadaydreamer.top/jump2mixin.gif)
+在项目根目录创建或编辑 `.vscode/settings.json`：
 
-![](https://assets.onlyadaydreamer.top/jump2mixin2.gif)
+```json
+{
+  "less.files": [
+    "@/src/styles/variables.less",
+    "@/src/styles/mixins.less",
+    "src/styles/theme.less"
+  ],
+  "less.notice": true
+}
+```
 
-## TODO
+#### 配置说明
 
-鼠标悬浮在色值变量时显示颜色, 这个没有找到方法，有路子的同学请指导指导 🙏🙏🙏~~~
+- **`less.files`**: Less 文件路径数组
+  - 支持 `@/` 别名（指向项目根目录）
+  - 支持相对路径（相对于项目根目录）
+  - 支持绝对路径
+
+- **`less.notice`**: 是否显示初次使用提示（默认 `true`）
+
+### 路径格式示例
+
+```json
+{
+  "less.files": [
+    // ✅ 推荐：使用 @ 别名
+    "@/src/styles/variables.less",
+
+    // ✅ 支持：相对路径
+    "src/styles/mixins.less",
+
+    // ✅ 支持：绝对路径
+    "/Users/username/project/src/styles/theme.less"
+  ]
+}
+```
+
+## 🎯 使用场景
+
+### 场景 1：Less 文件中使用
+```less
+// 输入 @ 自动补全变量
+.container {
+  color: @primary-color; // 自动补全并显示色值
+}
+
+// 输入 . 自动补全 Mixin
+.box {
+  .border-radius(4px); // 自动补全方法名
+}
+```
+
+### 场景 2：Vue SFC 中使用
+```vue
+<template>
+  <div class="my-component"></div>
+</template>
+
+<style lang="less" scoped>
+.my-component {
+  // 在 style 标签内，输入 @ 或 . 触发补全
+  background: @bg-color;
+  .flex-center(); // Mixin 补全
+}
+</style>
+```
+
+### 场景 3：递归导入
+```less
+// variables.less
+@primary-color: #1890ff;
+@import './theme.less';
+
+// theme.less
+@import './colors.less';
+@theme-bg: @base-color; // 来自 colors.less
+
+// colors.less
+@base-color: #fff;
+```
+**✨ 插件会自动加载所有三个文件，支持跨文件的变量补全和跳转**
+
+## 🔧 高级功能
+
+### 自动重新加载
+修改任何 Less 文件后：
+1. 📊 状态栏显示：`$(sync~spin) 重新加载 Less 文件...`
+2. 🔄 自动重新解析所有文件
+3. ✅ 完成后提示：`$(check) Less 文件已加载 (N 个文件)`
+
+### 智能括号检测
+插件会智能判断光标位置，避免在不合适的地方触发补全：
+```less
+// ✅ 会触发补全
+.box {
+  color: @|  // 光标位置
+}
+
+// ❌ 不会触发补全（在括号内）
+.mixin(@color: @|) {  // 避免在参数中误触发
+}
+```
+
+### Vue 文件智能识别
+只在 `<style>` 标签内触发补全：
+```vue
+<template>
+  <div>@|</div>  <!-- ❌ 不触发 -->
+</template>
+
+<style lang="less">
+.box {
+  color: @|  <!-- ✅ 触发补全 -->
+}
+</style>
+```
+
+## 🎬 功能演示
+
+### 变量自动补全
+
+### 方法自动补全
+
+### 悬浮提示
+
+### 跳转定义
+
+## 🆚 与原版对比
+
+| 功能 | 原版 | 增强版 |
+|------|------|--------|
+| Vue SFC 支持 | ❌ | ✅ |
+| 递归 @import 加载 | ❌ | ✅ |
+| 路径别名 (@/) | ❌ | ✅ |
+| 实时文件监听 | 部分 | ✅ 全量 |
+| 普通 CSS 类支持 | ❌ | ✅ |
+| 智能括号检测 | ❌ | ✅ |
+| 工作区配置 | ❌ | ✅ |
+| 状态栏提示 | ❌ | ✅ |
+
+## 📝 更新日志
+
+### v0.0.2 (最新)
+- ✨ 新增实时文件监听，修改后自动重新加载
+- ✨ 监听所有递归导入的 Less 文件
+- ✨ 添加状态栏加载提示
+- ✨ 文件删除时显示警告
+
+### v0.0.1
+- ✨ 添加路径别名 `@/` 支持
+- ✨ 实现递归 @import 加载功能
+- ✨ 添加循环引用保护
+- ✨ 支持普通 CSS 类的自动补全和跳转
+- ✨ Vue SFC 中的智能补全（仅在 style 标签内）
+- ✨ 智能括号检测，避免误触发
+- ✨ 修复重复点号问题
+- ✨ 配置保存到工作区而非用户设置
+- ✨ 移除重复的更新提示
+- ✨ Vue 文件中支持跳转定义
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 License
+
+MIT
+
+## 🙏 致谢
+
+- 原项目：[easier-less-vue](https://github.com/ADKcodeXD/easier-less)
+- Fork 并增强：[easier-less-vue](https://github.com/dmxiaoshubao/easier-less)

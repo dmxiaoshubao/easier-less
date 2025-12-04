@@ -7,7 +7,7 @@ import registerDefinition from './registerDefinition';
 import { getMixinsPaths } from './getMixins';
 import { getStore, originalData } from './getStore';
 import registerAutoComplete from './registerAutoComplete';
-import { watchMixins, watchConfig, watchers } from './watcher';
+import { watchAllImportedFiles, watchConfig, watchers } from './watcher';
 
 export const unRegisters: vscode.Disposable[] = [];
 
@@ -21,12 +21,28 @@ export async function activate(context: vscode.ExtensionContext) {
     unRegisters.forEach((unRegister) => unRegister.dispose());
     watchers.forEach((watcher) => watcher.dispose());
     originalData.length = 0;
+
     const mixinsPaths = getMixinsPaths();
-    watchMixins(mixinsPaths, init);
     const [store, variableStore, methodsStore] = await getStore(mixinsPaths);
+
+    // 收集所有被加载的文件路径（包括递归导入的）
+    const allFilePaths = originalData.map((item) => item[0]);
+
+    // 监听所有文件的变化（包括递归导入的文件）
+    watchAllImportedFiles(allFilePaths, init);
+
     registerHover(context, store, mixinsPaths);
     registerDefinition(context, mixinsPaths);
     registerAutoComplete(context, variableStore, methodsStore);
+
+    // 显示成功消息
+    if (allFilePaths.length > 0) {
+      console.log(`已加载 ${allFilePaths.length} 个 Less 文件`);
+      vscode.window.setStatusBarMessage(
+        `$(check) Less 文件已加载 (${allFilePaths.length} 个文件)`,
+        3000
+      );
+    }
   }
 }
 

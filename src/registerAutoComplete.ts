@@ -75,20 +75,38 @@ export default function (
       }
     }
 
-    // 简单匹配，只要当前光标前的字符串为 @ 都自动带出所有的依赖
-    if (/@$/g.test(lineText)) {
+    // 匹配 @ 后面跟着任意字符（支持过滤式补全）
+    const atMatch = lineText.match(/@([\w-]*)$/);
+    if (atMatch) {
+      // 计算 @ 符号的位置
+      const matchStartPos = position.character - atMatch[0].length;
+      const replaceRange = new vscode.Range(
+        position.line,
+        matchStartPos + 1, // 从 @ 之后开始替换，保留 @
+        position.line,
+        position.character  // 到光标位置
+      );
+
       return Object.entries(variableStore).map(([key, val]) => {
-        const completionItem = new vscode.CompletionItem(`${key}`);
+        // 移除key中的@符号，避免重复
+        const label = key.startsWith('@') ? key.substring(1) : key;
+        const completionItem = new vscode.CompletionItem(label, vscode.CompletionItemKind.Variable);
+
         completionItem.detail = val;
+        completionItem.insertText = label;
+        // 设置替换范围：只替换 @ 之后的内容，保留 @
+        completionItem.range = replaceRange;
+        // 设置 filterText 为带 @ 的完整变量名，这样 VSCode 才能正确过滤 @prim 这样的输入
+        completionItem.filterText = '@' + label;
+
         if (
           /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(val) ||
-          key.indexOf("Color") ||
-          key.indexOf("color")
+          key.indexOf("Color") !== -1 ||
+          key.indexOf("color") !== -1
         ) {
           completionItem.kind = vscode.CompletionItemKind.Color;
-        } else {
-          completionItem.kind = vscode.CompletionItemKind.Variable;
         }
+
         return completionItem;
       });
     }

@@ -1,9 +1,75 @@
 # Change Log
 
-All notable changes to the "less" extension will be documented in this file.
+All notable changes to the "easier-less-vue" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.0.2] - 2025-12-04
 
-## [Unreleased]
+### ✨ Added
+- **实时文件监听**: 监听所有 Less 文件（包括递归导入的文件）的变化
+- **自动重新加载**: 文件修改后自动重新加载，无需重启 VS Code
+- **状态栏提示**: 加载时在状态栏显示实时状态（同步图标）
+- **文件删除警告**: 当监听的文件被删除时显示警告消息
+- **加载统计**: 显示已加载的 Less 文件数量
 
-- Initial release
+### 🐛 Fixed
+- 优化文件监听器的资源释放逻辑
+- 改进错误处理和日志输出
+
+## [0.0.1] - 2025-11-27
+
+### ✨ Added
+- **路径别名支持**:
+  - 支持 `@/` 路径别名（指向项目根目录）
+  - 自动解析相对路径和绝对路径
+  - 配置文件时自动转换为 `@/` 格式
+
+- **递归导入加载**:
+  - 自动递归加载 `@import` 导入的所有文件
+  - 智能循环引用保护
+  - 支持多层嵌套导入
+
+- **增强的 CSS 类支持**:
+  - 支持普通 CSS 类（如 `.button`）的自动补全
+  - 支持普通 CSS 类的跳转定义
+  - 自动去重，避免补全时出现双点号
+
+- **Vue SFC 智能补全**:
+  - 只在 `<style>` 标签内触发补全
+  - 智能括号检测，避免在函数参数中误触发
+  - 支持 Vue 文件中的跳转定义
+
+- **配置改进**:
+  - 配置保存到工作区（`.vscode/settings.json`）而非用户设置
+  - 移除重复的更新提示
+  - 优化欢迎消息和配置流程
+
+### 🐛 Fixed
+- 修复选择自动补全项时出现重复点号的问题（`.button` → `..button`）
+- 改进单词识别逻辑，支持识别 `.` 开头的 CSS 类名
+- 优化 `isMethod` 判断，使用更精确的正则表达式
+
+### 📝 Documentation
+- 更新 README.md，添加所有新功能的详细说明
+- 添加配置示例和使用场景
+- 添加与原版的功能对比表
+
+## [0.0.9] - Previous Version
+
+### Features
+- 基础的 Less 变量自动补全（`@` 触发）
+- 基础的 Mixin 方法自动补全（`.` 触发）
+- 鼠标悬浮显示变量或方法的值
+- 跳转到变量或方法的定义位置
+- Vue SFC 基础支持
+- 配置文件选择功能
+
+---
+
+## 格式说明
+
+- ✨ Added: 新增功能
+- 🐛 Fixed: Bug 修复
+- 🔄 Changed: 功能变更
+- 🗑️ Removed: 移除的功能
+- 📝 Documentation: 文档更新
+- ⚡ Performance: 性能优化
