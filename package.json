@@ -4,7 +4,7 @@
   "description": "一个简单方便使用less的vscode插件(支持在vue sfc中运行)",
   "version": "0.0.2",
   "publisher": "dmxiaoshubao",
-  "repository": "https://github.com/ADKcodeXD/easier-less",
+  "repository": "https://github.com/dmxiaoshubao/easier-less",
   "license": "MIT",
   "icon": "images/less-for-vue.png",
   "engines": {
