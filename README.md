@@ -1,4 +1,4 @@
-# easier-less-vue ![](https://img.shields.io/badge/vscode%20plugin-0.0.2-brightgreen)
+# easy-use-less-vue
 
 🖖 一个方便使用 less 的 vscode 插件，专为 Vue 和 Less 开发优化
 
