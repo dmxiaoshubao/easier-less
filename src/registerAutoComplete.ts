@@ -1,12 +1,27 @@
 import * as vscode from "vscode";
 import { Store } from "./getStore";
 import { unRegisters } from "./extension";
+import { autoImportLessFile } from "./autoImport";
 
 export default function (
   context: vscode.ExtensionContext,
   variableStore: Store,
   methodsStore: Store
 ) {
+  // 注册自动导入命令
+  const autoImportCommand = vscode.commands.registerCommand(
+    'easierLess.autoImport',
+    async (varOrClassName: string) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        await autoImportLessFile(editor.document, varOrClassName);
+      }
+    }
+  );
+
+  context.subscriptions.push(autoImportCommand);
+  unRegisters.push(autoImportCommand);
+
   /**
    * 检查光标是否在 Vue 文件的 <style> 标签内
    */
@@ -99,6 +114,13 @@ export default function (
         // 设置 filterText 为带 @ 的完整变量名，这样 VSCode 才能正确过滤 @prim 这样的输入
         completionItem.filterText = '@' + label;
 
+        // 添加自动导入命令
+        completionItem.command = {
+          command: 'easierLess.autoImport',
+          title: 'Auto Import',
+          arguments: [key] // 传递完整的变量名（带 @）
+        };
+
         if (
           /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(val) ||
           key.indexOf("Color") !== -1 ||
@@ -113,7 +135,7 @@ export default function (
   }
 
   /**
-   * 属性值位置的 @ 变量补全（支持 color: @ 和 color:@ 场景）
+   * 属性值位置的 @ 变量补全（支持 color: @、color: @p 等场景）
    * 这个提供器在手动触发补全或输入冒号后触发
    */
   function provideCompletionItems3(
@@ -132,11 +154,27 @@ export default function (
       }
     }
 
-    // 检查是否在属性值位置：匹配 : 后面可能有空格，然后光标位置
-    // 支持 color: | 和 color:| 两种场景（|表示光标位置）
-    const propertyValueMatch = lineText.match(/:\s*$/);
+    // 检查是否在属性值位置：匹配 : 后面可能有空格，以及可能已经输入的 @ 变量（可能输入了部分）
+    // 支持 color: | 和 color:| 和 color: @p 等场景（|表示光标位置）
+    const propertyValueMatch = lineText.match(/:\s*(@[\w-]*)?$/);
 
     if (propertyValueMatch) {
+      const atPart = propertyValueMatch[1]; // 获取 @ 部分，如 "@p" 或 undefined
+      const hasAt = !!atPart;
+
+      // 计算替换范围
+      let replaceRange: vscode.Range | undefined;
+      if (hasAt) {
+        // 如果已经有 @，则替换整个 @ 变量部分
+        const matchStartPos = position.character - atPart.length;
+        replaceRange = new vscode.Range(
+          position.line,
+          matchStartPos,
+          position.line,
+          position.character
+        );
+      }
+
       // 在属性值位置，显示所有变量补全
       return Object.entries(variableStore).map(([key, val]) => {
         const label = key.startsWith('@') ? key.substring(1) : key;
@@ -150,6 +188,18 @@ export default function (
         completionItem.insertText = '@' + label;
         completionItem.filterText = '@' + label;
         completionItem.sortText = '0' + label; // 确保变量排在前面
+
+        // 如果已经有 @，设置替换范围
+        if (replaceRange) {
+          completionItem.range = replaceRange;
+        }
+
+        // 添加自动导入命令
+        completionItem.command = {
+          command: 'easierLess.autoImport',
+          title: 'Auto Import',
+          arguments: [key] // 传递完整的变量名（带 @）
+        };
 
         if (
           /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(val) ||
@@ -194,6 +244,14 @@ export default function (
         const completionItem = new vscode.CompletionItem(label);
         completionItem.detail = val;
         completionItem.kind = vscode.CompletionItemKind.Method;
+
+        // 添加自动导入命令
+        completionItem.command = {
+          command: 'easierLess.autoImport',
+          title: 'Auto Import',
+          arguments: [key] // 传递完整的类名（带 .）
+        };
+
         return completionItem;
       });
     }

@@ -8,8 +8,16 @@ export type Store = {
   [index: string]: string;
 };
 
+// 记录每个变量/类名来自哪个主文件（less.files 中配置的文件）
+export type SourceMap = {
+  [varOrClass: string]: string; // key: 变量名或类名, value: 主文件路径
+};
+
 // 记录每一个less文件的数据
 export let originalData: string[][] = [];
+// 记录变量和类名的源文件映射
+export let variableSourceMap: SourceMap = {};
+export let methodSourceMap: SourceMap = {};
 
 /**
  * 解析 @import 路径
@@ -108,12 +116,22 @@ export async function getStore(mixinsPaths: string[]) {
 
   // 清空之前的数据
   originalData = [];
+  variableSourceMap = {};
+  methodSourceMap = {};
 
   // 递归读取所有文件
   const allFilesData: Array<[string, string]> = [];
+  // 记录每个文件属于哪个主文件
+  const fileToMainFileMap: Map<string, string> = new Map();
+
   for (const mixinPath of mixinsPaths) {
     const filesData = await readFileWithImports(mixinPath);
     allFilesData.push(...filesData);
+
+    // 记录所有文件都属于这个主文件
+    filesData.forEach(([filePath]) => {
+      fileToMainFileMap.set(filePath, mixinPath);
+    });
   }
 
   // 保存到 originalData
@@ -121,43 +139,51 @@ export async function getStore(mixinsPaths: string[]) {
     originalData.push([fileData[0], fileData[1]]);
   });
 
-  // 合并所有文件内容
-  const data = allFilesData.map(([, content]) => content).join('\n');
-
   let variablesMap: Store = {};
   let methodsMap: Store = {};
 
   try {
-    // 解析变量
-    variablesMap = (data.match(/^@(?!import).*:.*/gm) || []).reduce(
-      (pre: Store, cur: string) => {
+    // 为每个文件单独解析变量和类，并记录其源文件
+    allFilesData.forEach(([filePath, content]) => {
+      const mainFile = fileToMainFileMap.get(filePath) || filePath;
+
+      // 解析变量
+      const variables = content.match(/^@(?!import).*:.*/gm) || [];
+      variables.forEach((cur: string) => {
         const arr: string[] = cur.split(/:\s*/);
-        pre[arr[0]] = arr[1]
-          .replace(/;?/g, '')
+        const varName = arr[0];
+        const varValue = arr[1]
+          ?.replace(/;?/g, '')
           .replace(/\/\/.*/g, '')
           .replace(/\/\*.*\*\/.*/g, '')
           ?.trim();
-        return pre;
-      },
-      {}
-    );
 
-    // 匹配带括号的方法，如 .method(...) { ... }
-    const methodMatches = data.match(/\.(.+?)\(.*?\)\s+{([^]*?)}/g) || [];
-    methodsMap = methodMatches.reduce((pre: Store, cur: string) => {
-      const name = cur.match(/^\..*?(?=(\(|\s+{))/g)?.[0] || '';
-      pre[name] = cur;
-      return pre;
-    }, {});
+        if (varName && !variablesMap[varName]) {
+          variablesMap[varName] = varValue;
+          variableSourceMap[varName] = mainFile; // 记录应该导入的主文件
+        }
+      });
 
-    // 匹配普通的类，如 .class-name { ... }，但排除已经匹配的方法
-    const classMatches = data.match(/\.([a-zA-Z0-9_-]+)\s*\{[^}]*\}/g) || [];
-    classMatches.forEach((cur) => {
-      const name = cur.match(/^\.[a-zA-Z0-9_-]+/)?.[0] || '';
-      // 只添加那些不是方法的类（不包含括号）
-      if (name && !methodsMap[name] && !cur.includes('(')) {
-        methodsMap[name] = cur;
-      }
+      // 匹配带括号的方法，如 .method(...) { ... }
+      const methodMatches = content.match(/\.(.+?)\(.*?\)\s+{([^]*?)}/g) || [];
+      methodMatches.forEach((cur: string) => {
+        const name = cur.match(/^\..*?(?=(\(|\s+{))/g)?.[0] || '';
+        if (name && !methodsMap[name]) {
+          methodsMap[name] = cur;
+          methodSourceMap[name] = mainFile; // 记录应该导入的主文件
+        }
+      });
+
+      // 匹配普通的类，如 .class-name { ... }，但排除已经匹配的方法
+      const classMatches = content.match(/\.([a-zA-Z0-9_-]+)\s*\{[^}]*\}/g) || [];
+      classMatches.forEach((cur) => {
+        const name = cur.match(/^\.[a-zA-Z0-9_-]+/)?.[0] || '';
+        // 只添加那些不是方法的类（不包含括号）
+        if (name && !methodsMap[name] && !cur.includes('(')) {
+          methodsMap[name] = cur;
+          methodSourceMap[name] = mainFile; // 记录应该导入的主文件
+        }
+      });
     });
 
     return [{ ...variablesMap, ...methodsMap }, variablesMap, methodsMap];
