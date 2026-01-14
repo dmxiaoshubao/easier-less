@@ -24,6 +24,8 @@ All notable changes to the "easier-less-vue" extension will be documented in thi
 - 修复自动导入时路径缺少 `.less` 后缀的问题
 - 修复别名路径解析不正确导致重复导入的问题
 - 修复并发导入时的竞态条件问题
+- 修复初始化配置时硬编码使用 `@/` 别名的问题，现在会根据 tsconfig.json/jsconfig.json 中实际配置的别名生成路径
+- 修复更改别名配置后 less.files 路径不会更新的问题，现在支持动态读取所有配置的别名
 
 ## [0.0.2] - 2025-12-04
 

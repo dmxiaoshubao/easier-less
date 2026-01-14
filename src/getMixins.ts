@@ -1,7 +1,56 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-// import path, { resolve } from 'path';
-// import { rejects } from 'assert';
+import * as fs from 'fs';
+
+/**
+ * 读取项目的别名配置（从 jsconfig.json 或 tsconfig.json）
+ */
+function getAliasConfig(workspaceRoot: string): { [key: string]: string } {
+  const aliasConfig: { [key: string]: string } = {};
+
+  // 尝试读取 jsconfig.json 或 tsconfig.json
+  const configFiles = ['jsconfig.json', 'tsconfig.json'];
+
+  for (const configFile of configFiles) {
+    const configPath = path.join(workspaceRoot, configFile);
+
+    if (fs.existsSync(configPath)) {
+      try {
+        const configContent = fs.readFileSync(configPath, 'utf-8');
+        // 移除注释（简单处理）
+        const jsonContent = configContent.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+        const config = JSON.parse(jsonContent);
+
+        const compilerOptions = config.compilerOptions;
+        if (compilerOptions && compilerOptions.paths) {
+          const baseUrl = compilerOptions.baseUrl || '.';
+          const paths = compilerOptions.paths;
+
+          // 解析 paths 配置
+          for (const [alias, targets] of Object.entries(paths)) {
+            if (Array.isArray(targets) && targets.length > 0) {
+              // 移除通配符 /*
+              const cleanAlias = alias.replace(/\/\*$/, '');
+              const cleanTarget = (targets[0] as string).replace(/\/\*$/, '');
+
+              // 计算实际路径
+              const actualPath = path.join(workspaceRoot, baseUrl, cleanTarget);
+              aliasConfig[cleanAlias] = actualPath;
+
+              console.log(`[GetMixins] 找到别名配置: ${cleanAlias} -> ${actualPath}`);
+            }
+          }
+        }
+
+        break; // 找到配置文件就停止
+      } catch (error) {
+        console.error(`[GetMixins] 解析 ${configFile} 失败:`, error);
+      }
+    }
+  }
+
+  return aliasConfig;
+}
 
 export function getMixinsPaths() {
   /*   // 所有变量文件
@@ -47,16 +96,27 @@ export function getMixinsPaths() {
     vscode.workspace.getConfiguration().get<Array<string>>('less.files') || [];
   console.log(files);
 
-  // 解析 @ 符号路径别名和相对路径
+  // 解析别名路径和相对路径
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
+
+    // 获取别名配置
+    const aliasConfig = getAliasConfig(workspaceRoot);
+
     const resolvedFiles = files.map((file) => {
       if (typeof file === 'string') {
-        // 处理 @/ 开头的路径
-        if (file.startsWith('@/')) {
-          return path.join(workspaceRoot, file.substring(2));
+        // 尝试匹配配置的别名
+        for (const [alias, aliasPath] of Object.entries(aliasConfig)) {
+          if (file.startsWith(alias + '/') || file === alias) {
+            // 替换别名为实际路径
+            const relativePath = file.substring(alias.length + 1); // +1 是为了跳过斜杠
+            const resolvedPath = path.join(aliasPath, relativePath);
+            console.log(`[GetMixins] 别名解析: ${file} -> ${resolvedPath}`);
+            return resolvedPath;
+          }
         }
+
         // 处理相对路径（不是绝对路径的情况）
         // 判断是否为绝对路径：Windows 下以盘符开头，Unix 下以 / 开头
         const isAbsolute = path.isAbsolute(file);

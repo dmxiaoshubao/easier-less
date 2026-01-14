@@ -2,6 +2,96 @@ import * as vscode from 'vscode';
 import fs from 'fs';
 import * as path from 'path';
 
+/**
+ * 读取项目的别名配置（从 jsconfig.json 或 tsconfig.json）
+ */
+function getAliasConfig(workspaceRoot: string): { [key: string]: string } {
+  const aliasConfig: { [key: string]: string } = {};
+
+  // 尝试读取 jsconfig.json 或 tsconfig.json
+  const configFiles = ['jsconfig.json', 'tsconfig.json'];
+
+  for (const configFile of configFiles) {
+    const configPath = path.join(workspaceRoot, configFile);
+
+    if (fs.existsSync(configPath)) {
+      try {
+        const configContent = fs.readFileSync(configPath, 'utf-8');
+        // 移除注释（简单处理）
+        const jsonContent = configContent.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+        const config = JSON.parse(jsonContent);
+
+        const compilerOptions = config.compilerOptions;
+        if (compilerOptions && compilerOptions.paths) {
+          const baseUrl = compilerOptions.baseUrl || '.';
+          const paths = compilerOptions.paths;
+
+          // 解析 paths 配置
+          for (const [alias, targets] of Object.entries(paths)) {
+            if (Array.isArray(targets) && targets.length > 0) {
+              // 移除通配符 /*
+              const cleanAlias = alias.replace(/\/\*$/, '');
+              const cleanTarget = (targets[0] as string).replace(/\/\*$/, '');
+
+              // 计算实际路径
+              const actualPath = path.join(workspaceRoot, baseUrl, cleanTarget);
+              aliasConfig[cleanAlias] = actualPath;
+
+              console.log(`[Welcome] 找到别名配置: ${cleanAlias} -> ${actualPath}`);
+            }
+          }
+        }
+
+        break; // 找到配置文件就停止
+      } catch (error) {
+        console.error(`[Welcome] 解析 ${configFile} 失败:`, error);
+      }
+    }
+  }
+
+  return aliasConfig;
+}
+
+/**
+ * 将绝对路径转换为别名路径或相对路径
+ */
+function convertToAliasPath(absolutePath: string, workspaceRoot: string): string {
+  // 规范化路径
+  const normalizedAbsPath = path.normalize(absolutePath);
+  const normalizedWorkspaceRoot = path.normalize(workspaceRoot);
+
+  // 检查路径是否在工作区内
+  if (!normalizedAbsPath.startsWith(normalizedWorkspaceRoot)) {
+    return absolutePath; // 不在工作区内，返回绝对路径
+  }
+
+  // 获取别名配置
+  const aliasConfig = getAliasConfig(workspaceRoot);
+
+  // 尝试匹配别名
+  for (const [alias, aliasPath] of Object.entries(aliasConfig)) {
+    const normalizedAliasPath = path.normalize(aliasPath);
+
+    // 检查文件是否在别名路径下
+    if (normalizedAbsPath.startsWith(normalizedAliasPath)) {
+      // 计算相对于别名路径的路径
+      const relativePath = path.relative(normalizedAliasPath, normalizedAbsPath);
+      // 生成别名路径
+      const aliasImportPath = alias + '/' + relativePath.replace(/\\/g, '/');
+
+      console.log(`[Welcome] 生成别名路径: ${absolutePath} -> ${aliasImportPath}`);
+      return aliasImportPath;
+    }
+  }
+
+  // 如果没有匹配的别名，使用相对于工作区根目录的路径
+  const relativePath = path.relative(workspaceRoot, normalizedAbsPath);
+  const relativePathFormatted = relativePath.replace(/\\/g, '/');
+
+  console.log(`[Welcome] 生成相对路径: ${absolutePath} -> ${relativePathFormatted}`);
+  return relativePathFormatted;
+}
+
 export function welcome() {
   const notice = vscode.workspace.getConfiguration().get('less.notice');
 
@@ -46,10 +136,9 @@ export function welcome() {
                   uris?.forEach((uri) => {
                     let p = uri.path;
                     if (p && fs.existsSync(p)) {
-                      // 如果路径在工作区内，转换为 @ 符号形式
-                      if (workspaceRoot && p.startsWith(workspaceRoot)) {
-                        const relativePath = path.relative(workspaceRoot, p);
-                        p = '@/' + relativePath.replace(/\\/g, '/');
+                      // 根据实际配置的别名转换路径
+                      if (workspaceRoot) {
+                        p = convertToAliasPath(p, workspaceRoot);
                       }
                       mixinsPaths.push(p);
                     }
