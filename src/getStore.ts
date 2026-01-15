@@ -87,11 +87,17 @@ async function readFileWithImports(
     const content = await read(normalizedPath, { encoding: 'utf-8' });
     const result: Array<[string, string]> = [[normalizedPath, content]];
 
+    // 移除注释后再查找 @import 语句
+    // 先移除多行注释 /* ... */
+    let contentWithoutComments = content.replace(/\/\*[\s\S]*?\*\//g, '');
+    // 再移除单行注释 // ...（但保留字符串内的 //）
+    contentWithoutComments = contentWithoutComments.replace(/(?<!['"])\/\/.*/g, '');
+
     // 查找所有 @import 语句
     const importRegex = /@import\s*(?:\([^)]*\))?\s*['"]([^'"]+)['"]/g;
     let match;
 
-    while ((match = importRegex.exec(content)) !== null) {
+    while ((match = importRegex.exec(contentWithoutComments)) !== null) {
       const importPath = match[1];
       const resolvedPath = resolveImportPath(importPath, normalizedPath);
 
