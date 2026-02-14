@@ -49,7 +49,8 @@
     "lint": "eslint --fix src --ext ts",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "test": "node ./out/test/runTest.js"
+    "test": "npm run test:unit",
+    "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000"
   },
   "devDependencies": {
     "@types/vscode": "^1.46.0",

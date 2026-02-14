@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { unRegisters } from './extension';
 import { originalData } from './getStore';
+import { isLessSymbolWord, normalizeDefinitionWord } from './editorCore';
 
 export default function (
   context: vscode.ExtensionContext,
@@ -21,26 +22,16 @@ export default function (
     }
     let word = document.getText(wordRange);
 
-    // 如果没有点号，检查前一个字符是否是点号
-    if (!word.startsWith('.')) {
-      const lineText = document.lineAt(position.line).text;
-      const wordStart = wordRange.start.character;
-      if (wordStart > 0 && lineText[wordStart - 1] === '.') {
-        word = '.' + word;
-      }
-    }
-
-    // 和 hover 中的判断有所区分
-    const isMethod = /^\.[a-zA-Z0-9_-]+/i.test(word);
-    const isVariable = /^@(?!import)\w+/i.test(word);
+    const lineText = document.lineAt(position.line).text;
+    word = normalizeDefinitionWord(word, lineText, wordRange.start.character);
+    const isAllowed = isLessSymbolWord(word);
 
     originalData.forEach((item) => {
       const [path, content] = item;
-      console.log(111, content.indexOf(word), mixinsPaths);
       if (
         !mixinsPaths.includes(fileName) &&
         content.indexOf(word) !== -1 &&
-        (isMethod || isVariable)
+        isAllowed
       ) {
         const lines = content
           .slice(0, content.indexOf(word))

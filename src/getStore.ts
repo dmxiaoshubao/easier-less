@@ -22,7 +22,7 @@ export let methodSourceMap: SourceMap = {};
 /**
  * 解析 @import 路径
  */
-function resolveImportPath(importPath: string, currentFilePath: string): string | null {
+export function resolveImportPath(importPath: string, currentFilePath: string): string | null {
   // 移除引号和分号
   importPath = importPath.replace(/['"]/g, '').replace(/;/g, '').trim();
 
@@ -69,7 +69,7 @@ function resolveImportPath(importPath: string, currentFilePath: string): string 
 /**
  * 递归读取文件及其导入的文件
  */
-async function readFileWithImports(
+export async function readFileWithImports(
   filePath: string,
   processedFiles: Set<string> = new Set()
 ): Promise<Array<[string, string]>> {
