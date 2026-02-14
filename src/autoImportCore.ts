@@ -1,6 +1,105 @@
 import * as path from 'path';
 import { AliasConfig } from './aliasCore';
 
+function stripCommentsForImportScan(text: string): string {
+  let result = '';
+  let i = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  while (i < text.length) {
+    const ch = text[i];
+    const next = text[i + 1];
+    const prev = i > 0 ? text[i - 1] : '';
+
+    if (inLineComment) {
+      if (ch === '\n' || ch === '\r') {
+        inLineComment = false;
+        result += ch;
+      } else {
+        result += ' ';
+      }
+      i++;
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        inBlockComment = false;
+        result += '  ';
+        i += 2;
+        continue;
+      }
+      result += ch === '\n' || ch === '\r' ? ch : ' ';
+      i++;
+      continue;
+    }
+
+    if (inSingleQuote) {
+      result += ch;
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '\'') {
+        inSingleQuote = false;
+      }
+      i++;
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      result += ch;
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inDoubleQuote = false;
+      }
+      i++;
+      continue;
+    }
+
+    if (ch === '\'') {
+      inSingleQuote = true;
+      result += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '"') {
+      inDoubleQuote = true;
+      result += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '/' && next === '*') {
+      inBlockComment = true;
+      result += '  ';
+      i += 2;
+      continue;
+    }
+
+    const isLikelyLineComment = ch === '/' && next === '/' && /[\s{(;,]/.test(prev || ' ');
+    if (isLikelyLineComment) {
+      inLineComment = true;
+      result += '  ';
+      i += 2;
+      continue;
+    }
+
+    result += ch;
+    i++;
+  }
+
+  return result;
+}
+
 export function resolveImportPathToAbsolute(
   importPath: string,
   currentFileDir: string,
@@ -46,9 +145,10 @@ export function hasImportedTarget(
 ): boolean {
   const importRegex = /@import\s*(?:\([^)]*\))?\s*['"]([^'"]+)['"]/g;
   const normalizedTargetPath = path.normalize(targetPath);
+  const scanText = stripCommentsForImportScan(documentText);
   let match: RegExpExecArray | null = null;
 
-  while ((match = importRegex.exec(documentText)) !== null) {
+  while ((match = importRegex.exec(scanText)) !== null) {
     const resolvedPath = resolveImportPathToAbsolute(
       match[1],
       currentFileDir,
@@ -95,11 +195,14 @@ export function buildImportPath(
 export function getVueStyleInsertOffset(text: string): number {
   const styleTagMatch = text.match(/<style[^>]*>/);
   if (!styleTagMatch || styleTagMatch.index === undefined) {
-    return 0;
+    return -1;
   }
 
   const tagEndOffset = styleTagMatch.index + styleTagMatch[0].length;
   const nextChar = text.charAt(tagEndOffset);
+  if (nextChar === '\r' && text.charAt(tagEndOffset + 1) === '\n') {
+    return tagEndOffset + 2;
+  }
   if (nextChar === '\n' || nextChar === '\r') {
     return tagEndOffset + 1;
   }

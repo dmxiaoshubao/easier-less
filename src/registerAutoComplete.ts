@@ -3,6 +3,10 @@ import { Store } from './getStore';
 import { unRegisters } from './extension';
 import { autoImportLessFile } from './autoImport';
 import {
+  buildAtCompletionInsertText,
+  buildDotCompletionInsertText,
+  getAtIdentifierSuffixLength,
+  getDotCompletionSuffixReplaceLength,
   isInParentheses,
   isInStyleTag,
   matchAtCompletion,
@@ -43,7 +47,11 @@ export default function (
     document: vscode.TextDocument,
     position: vscode.Position
   ) {
-    const lineText = document.lineAt(position).text.substring(0, position.character);
+    const fullLineText = document.lineAt(position).text;
+    const lineText = fullLineText.substring(0, position.character);
+    const rightText = fullLineText.substring(position.character);
+    const rightIdentifierSuffixLength = getAtIdentifierSuffixLength(rightText);
+    const normalizedRightText = rightText.slice(rightIdentifierSuffixLength);
     if (shouldSkipForVue(document, position, lineText)) {
       return;
     }
@@ -58,7 +66,7 @@ export default function (
       position.line,
       matchStartPos + 1,
       position.line,
-      position.character
+      position.character + rightIdentifierSuffixLength
     );
 
     return Object.entries(variableStore).map(([key, val]) => {
@@ -69,7 +77,11 @@ export default function (
       );
 
       completionItem.detail = val;
-      completionItem.insertText = label;
+      completionItem.insertText = buildAtCompletionInsertText(
+        label,
+        normalizedRightText,
+        false
+      );
       completionItem.range = replaceRange;
       completionItem.filterText = '@' + label;
       completionItem.command = {
@@ -94,7 +106,11 @@ export default function (
     document: vscode.TextDocument,
     position: vscode.Position
   ) {
-    const lineText = document.lineAt(position).text.substring(0, position.character);
+    const fullLineText = document.lineAt(position).text;
+    const lineText = fullLineText.substring(0, position.character);
+    const rightText = fullLineText.substring(position.character);
+    const rightIdentifierSuffixLength = getAtIdentifierSuffixLength(rightText);
+    const normalizedRightText = rightText.slice(rightIdentifierSuffixLength);
     if (shouldSkipForVue(document, position, lineText)) {
       return;
     }
@@ -113,7 +129,7 @@ export default function (
         position.line,
         matchStartPos,
         position.line,
-        position.character
+        position.character + rightIdentifierSuffixLength
       );
     }
 
@@ -125,7 +141,11 @@ export default function (
       );
 
       completionItem.detail = val;
-      completionItem.insertText = '@' + label;
+      completionItem.insertText = buildAtCompletionInsertText(
+        label,
+        normalizedRightText,
+        true
+      );
       completionItem.filterText = '@' + label;
       completionItem.sortText = '0' + label;
 
@@ -155,7 +175,9 @@ export default function (
     document: vscode.TextDocument,
     position: vscode.Position
   ) {
-    const lineText = document.lineAt(position).text.substring(0, position.character);
+    const fullLineText = document.lineAt(position).text;
+    const lineText = fullLineText.substring(0, position.character);
+    const rightText = fullLineText.substring(position.character);
     if (shouldSkipForVue(document, position, lineText)) {
       return;
     }
@@ -164,11 +186,32 @@ export default function (
       return;
     }
 
+    const dotMatch = lineText.match(/\.([\w.-]*)$/);
+    const dotPrefix = dotMatch ? dotMatch[1] : '';
+    const replaceStart = position.character - dotPrefix.length;
+    const rightIdentifierSuffixLength =
+      (rightText.match(/^[\w.-]*/) || [''])[0].length;
+    const normalizedRightText = rightText.slice(rightIdentifierSuffixLength);
+
     return Object.entries(methodsStore).map(([key, val]) => {
       const label = key.startsWith('.') ? key.substring(1) : key;
       const completionItem = new vscode.CompletionItem(label);
       completionItem.detail = val;
       completionItem.kind = vscode.CompletionItemKind.Method;
+      const suffixReplaceLength = getDotCompletionSuffixReplaceLength(
+        val,
+        normalizedRightText
+      );
+      completionItem.range = new vscode.Range(
+        position.line,
+        replaceStart,
+        position.line,
+        position.character + rightIdentifierSuffixLength + suffixReplaceLength
+      );
+      completionItem.insertText = new vscode.SnippetString(
+        buildDotCompletionInsertText(key, val, normalizedRightText)
+      );
+      completionItem.filterText = '.' + label;
       completionItem.command = {
         command: 'easierLess.autoImport',
         title: 'Auto Import',

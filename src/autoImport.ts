@@ -66,6 +66,10 @@ async function insertImport(
   if (document.languageId === 'vue') {
     const text = document.getText();
     const insertOffset = getVueStyleInsertOffset(text);
+    if (insertOffset < 0) {
+      vscode.window.showWarningMessage('未找到 <style> 标签，无法自动导入 less 文件');
+      return false;
+    }
     insertPosition = document.positionAt(insertOffset);
     const nextChar = text.charAt(insertOffset);
     if (nextChar !== '\n' && nextChar !== '\r' && insertOffset !== 0) {

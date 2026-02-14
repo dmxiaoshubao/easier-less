@@ -31,8 +31,185 @@ export function matchPropertyValueCompletion(lineText: string): RegExpMatchArray
   return lineText.match(/:\s*(@[\w-]*)?$/);
 }
 
+export function getAtIdentifierSuffixLength(rightText: string): number {
+  const match = rightText.match(/^[\w-]*/);
+  return match ? match[0].length : 0;
+}
+
 export function shouldTriggerDotCompletion(lineText: string): boolean {
-  return /\.$/g.test(lineText);
+  return /(?:^|[\s,{;(])\.[\w.-]*$/.test(lineText);
+}
+
+function shouldAppendSemicolon(rightText: string): boolean {
+  const trimmed = rightText.trimStart();
+  if (!trimmed) {
+    return true;
+  }
+  if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+    return true;
+  }
+  return false;
+}
+
+function hasLeadingSemicolon(rightText: string): boolean {
+  return /^\s*;/.test(rightText);
+}
+
+type LeadingMethodCallInfo = {
+  full: string;
+  args: string;
+  hasSemicolon: boolean;
+};
+
+function getLeadingMethodCallInfo(rightText: string): LeadingMethodCallInfo | null {
+  let i = 0;
+  while (i < rightText.length && /\s/.test(rightText[i])) {
+    i++;
+  }
+
+  if (rightText[i] !== '(') {
+    return null;
+  }
+
+  const openIndex = i;
+  let depth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+
+  for (; i < rightText.length; i++) {
+    const ch = rightText[i];
+
+    if (inSingleQuote) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '\'') {
+        inSingleQuote = false;
+      }
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inDoubleQuote = false;
+      }
+      continue;
+    }
+
+    if (ch === '\'') {
+      inSingleQuote = true;
+      continue;
+    }
+    if (ch === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+
+    if (ch === '(') {
+      depth++;
+      continue;
+    }
+    if (ch === ')') {
+      depth--;
+      if (depth === 0) {
+        break;
+      }
+    }
+  }
+
+  if (depth !== 0 || i >= rightText.length) {
+    return null;
+  }
+
+  const closeIndex = i;
+  const args = rightText.slice(openIndex + 1, closeIndex);
+  const cursorAfterCall = closeIndex + 1;
+  let semicolonProbeIndex = cursorAfterCall;
+  while (semicolonProbeIndex < rightText.length && /\s/.test(rightText[semicolonProbeIndex])) {
+    semicolonProbeIndex++;
+  }
+  const hasSemicolon = rightText[semicolonProbeIndex] === ';';
+  let endIndex = cursorAfterCall;
+  if (hasSemicolon) {
+    endIndex = semicolonProbeIndex + 1;
+  }
+
+  return {
+    full: rightText.slice(0, endIndex),
+    args,
+    hasSemicolon,
+  };
+}
+
+export function buildDotCompletionInsertText(
+  key: string,
+  definition: string,
+  rightText: string = ''
+): string {
+  const label = key.startsWith('.') ? key.substring(1) : key;
+  const isMethodLike = /^\s*\.[a-zA-Z0-9_-]+\s*\([^)]*\)\s*\{/.test(definition);
+  if (isMethodLike) {
+    const methodCallInfo = getLeadingMethodCallInfo(rightText);
+    if (methodCallInfo) {
+      const methodCallText = methodCallInfo.full;
+      const argsText = methodCallInfo.args;
+      const hasSemicolonInCall = methodCallInfo.hasSemicolon;
+      const callWithoutSemicolon = methodCallText
+        .replace(/\s*;\s*$/, '')
+        .replace(/\s+$/, '');
+      const afterCall = rightText.slice(methodCallText.length);
+      const needSemicolon = hasSemicolonInCall || shouldAppendSemicolon(afterCall);
+
+      if (argsText.trim().length > 0) {
+        return needSemicolon
+          ? `${label}${callWithoutSemicolon};`
+          : `${label}${callWithoutSemicolon}`;
+      }
+
+      return needSemicolon ? `${label}($1);` : `${label}($1)`;
+    }
+
+    const hasSemicolon = hasLeadingSemicolon(rightText);
+    if (hasSemicolon || !shouldAppendSemicolon(rightText)) {
+      return `${label}($1)`;
+    }
+    return `${label}($1);`;
+  }
+
+  if (hasLeadingSemicolon(rightText) || !shouldAppendSemicolon(rightText)) {
+    return `${label}`;
+  }
+  return `${label};`;
+}
+
+export function getDotCompletionSuffixReplaceLength(
+  definition: string,
+  rightText: string
+): number {
+  const isMethodLike = /^\s*\.[a-zA-Z0-9_-]+\s*\([^)]*\)\s*\{/.test(definition);
+  if (!isMethodLike) {
+    return 0;
+  }
+  const methodCallInfo = getLeadingMethodCallInfo(rightText);
+  return methodCallInfo ? methodCallInfo.full.length : 0;
+}
+
+export function buildAtCompletionInsertText(
+  label: string,
+  rightText: string,
+  keepAtPrefix: boolean
+): string {
+  const base = keepAtPrefix ? '@' + label : label;
+  if (hasLeadingSemicolon(rightText) || !shouldAppendSemicolon(rightText)) {
+    return base;
+  }
+  return `${base};`;
 }
 
 export function detectHoverSearchKey(lineText: string, cursorPos: number): string {
@@ -123,5 +300,8 @@ export function normalizeDefinitionWord(
 }
 
 export function isLessSymbolWord(word: string): boolean {
-  return /^\.[a-zA-Z0-9_-]+/i.test(word) || /^@(?!import)\w+/i.test(word);
+  return (
+    /^\.[a-zA-Z0-9_-]+/i.test(word) ||
+    /^@(?!import\b)[a-zA-Z0-9_-]+/i.test(word)
+  );
 }

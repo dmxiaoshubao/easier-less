@@ -48,6 +48,26 @@ describe('autoImportCore', () => {
     assert.strictEqual(imported, true);
   });
 
+  it('导入检测应忽略注释中的 @import', () => {
+    const workspaceRoot = path.join('/', 'repo');
+    const aliasConfig = { '@': path.join(workspaceRoot, 'src') };
+    const currentDir = path.join(workspaceRoot, 'src', 'pages');
+    const text = [
+      "// @import (reference) '@/styles/theme';",
+      "/* @import (reference) '@/styles/theme'; */",
+      ".box { background: url(http://example.com/a.png); }",
+    ].join('\n');
+
+    const imported = hasImportedTarget(
+      text,
+      path.join(workspaceRoot, 'src', 'styles', 'theme.less'),
+      currentDir,
+      workspaceRoot,
+      aliasConfig
+    );
+    assert.strictEqual(imported, false);
+  });
+
   it('生成导入路径时优先使用别名', () => {
     const workspaceRoot = path.join('/', 'repo');
     const aliasConfig = { '@': path.join(workspaceRoot, 'src') };
@@ -63,5 +83,16 @@ describe('autoImportCore', () => {
     const text = '<template></template>\n<style lang="less">\n.box{}';
     const offset = getVueStyleInsertOffset(text);
     assert.strictEqual(text.slice(offset, offset + 1), '.');
+  });
+
+  it('可处理 vue style 标签后的 CRLF 换行', () => {
+    const text = '<template></template>\r\n<style lang="less">\r\n.box{}';
+    const offset = getVueStyleInsertOffset(text);
+    assert.strictEqual(text.slice(offset, offset + 1), '.');
+  });
+
+  it('vue 文件缺少 style 标签时返回 -1', () => {
+    const text = '<template><div /></template>';
+    assert.strictEqual(getVueStyleInsertOffset(text), -1);
   });
 });
