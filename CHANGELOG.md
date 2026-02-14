@@ -2,6 +2,25 @@
 
 All notable changes to the "easier-less-vue" extension will be documented in this file.
 
+## [0.1.0] - 2026-02-14
+
+### ✨ Added
+- 新增 core 模块分层：`aliasCore`、`autoImportCore`、`editorCore`、`watcherCore`、`welcomeCore`
+- 新增运行时诊断模块 `diagnostics`，支持记录重载耗时、watcher 数量与注册项数量，并提供阈值/趋势判定
+- 新增与完善单元测试覆盖：`aliasCore`、`autoImportCore`、`diagnostics`、`editorCore`、`getStore`、`watcherCore`、`welcomeCore`
+
+### 🔄 Changed
+- 重构扩展初始化与重载流程，统一动态注册项与 watcher 的清理/重建顺序，强化生命周期管理
+- 自动补全插入逻辑升级为右侧上下文感知，支持根据 `()`、参数调用、分号与注释动态选择插入模板
+- `@` 补全支持光标位于标识符中间时替换右侧后缀，避免重复拼接
+
+### 🐛 Fixed
+- 修复导入检测误把注释中的 `@import` 识别为已导入的问题
+- 修复 Vue 文件缺少 `<style>` 标签时自动导入插入位置异常的问题
+- 修复 dot 补全在断开后再次触发无建议的问题
+- 修复方法补全在已有参数调用（含嵌套括号参数）时重复插入括号或分号的问题
+- 修复 `@primary-color` 连字符变量在符号识别与跳转场景中的匹配问题
+
 ## [0.0.4] - 2026-01-16
 
 ### 🐛 Fixed

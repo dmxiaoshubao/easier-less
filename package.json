@@ -2,7 +2,7 @@
   "name": "easy-to-use-less-vue",
   "displayName": "easy-use-less-vue",
   "description": "一个简单方便使用less的vscode插件(支持在vue sfc中运行)",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "publisher": "dmxiaoshubao",
   "repository": "https://github.com/dmxiaoshubao/easier-less",
   "license": "MIT",

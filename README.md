@@ -12,6 +12,8 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 - 🔧 **动态别名解析**：读取项目的 `jsconfig.json`/`tsconfig.json`，支持所有配置的路径别名
 - 🛡️ **防重复导入**：智能识别已导入的文件，避免重复（支持别名和相对路径）
 - 📂 **优先使用别名**：自动使用项目配置的别名（如 `@/`），使代码更简洁
+- 🧹 **注释安全检测**：导入检测会忽略注释中的 `@import`，避免误判为已导入
+- ⚠️ **Vue 场景保护**：在无 `<style>` 标签时不会错误插入导入语句，并给出提示
 
 ### 2. 智能自动补全
 - 📝 **变量补全**：输入 `@` 自动提示所有 Less 变量，色值变量会显示颜色
@@ -19,6 +21,8 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 - 🎨 **Vue SFC 支持**：在 `.vue` 文件的 `<style lang="less">` 标签内智能触发
 - 🚫 **智能过滤**：自动排除括号内的补全（避免在函数参数中误触发）
 - ⚡ **增强过滤**：支持输入部分变量名继续补全（如 `color: @p` 可提示 `@primary-color`）
+- ✍️ **上下文感知插入**：会根据右侧是否已有 `()`、参数、`;`、注释决定插入内容，避免重复拼接
+- 🎯 **中间光标替换**：在标识符中间触发补全时，会连同右侧后缀一起替换（如 `@primary-co|lor`）
 
 ### 3. 增强悬浮提示
 - 🔍 **变量悬停**：鼠标悬停在 Less 变量（如 `@primary-color`）的任意位置，即时显示其定义值
@@ -52,6 +56,12 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 - ✅ 支持普通 CSS 类（如 `.button`）
 - ✅ 支持 Mixin 方法（如 `.button(@color)`）
 - ✅ 自动去重，避免补全时出现双点号
+
+### 9. 🧪 稳定性与测试保障
+- 🧱 **核心逻辑解耦**：将别名解析、编辑器判断、自动导入与 watcher 判断下沉到 core 模块，降低耦合
+- ♻️ **生命周期加固**：重载前清理注册项与 watcher，避免重复注册和资源残留
+- 📈 **运行时诊断**：记录重载耗时、watcher 数量和注册项数量，支持阈值校验
+- ✅ **单元测试覆盖**：新增并持续扩展 `alias/autoImport/editor/diagnostics/getStore/watcher/welcome` 核心测试
 
 
 ## 🎬 功能演示
@@ -256,7 +266,15 @@ fork 自 https://github.com/ADKcodeXD/easier-less
 
 ## 📝 更新日志
 
-### v0.0.4 (最新)
+### v0.1.0 (最新)
+- ✨ 核心模块重构：新增 `aliasCore`、`autoImportCore`、`editorCore`、`watcherCore`、`welcomeCore`、`diagnostics`，提升可维护性
+- 🔄 生命周期改进：初始化/重载链路加入资源清理与重建，降低重复注册与 watcher 残留风险
+- 🧪 单测体系升级：新增并完善多个核心模块单元测试，形成稳定回归门禁
+- 🐛 自动导入修复：忽略注释中的 `@import`，并完善 Vue 无 `<style>`、CRLF 等边界场景
+- 🐛 补全行为修复：解决中间光标补全重复拼接问题，补全插入支持右侧上下文感知（含参数调用、分号与注释）
+- 🐛 定义识别修复：支持 `@primary-color` 这类连字符变量符号识别
+
+### v0.0.4
 - 🐛 修复注释中的 @import 语句也会被加载的问题
 
 ### v0.0.3
